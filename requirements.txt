@@ -1,0 +1,8 @@
+streamlit
+pandas
+pydantic
+langchain_google_genai
+browser_use
+asyncio
+dotenv
+playwright
