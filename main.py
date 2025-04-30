@@ -8,6 +8,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from browser_use import Agent, Controller
 import asyncio
 import csv
+import google.generativeai as genai
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -16,9 +17,13 @@ WEBSITE = os.getenv("WEBSITE")
 USER_NAME = os.getenv("USER_NAME")
 PASSWORD = os.getenv("PASSWORD")
 
+genai.configure(api_key=API_KEY)
+
+# if system is windows
 if os.name == 'nt':
 	asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 
+st.set_page_config(page_title="Automation App", page_icon="CUD.png")
 #=====Data & Methods=====
 
 # --- NOT USED ---
@@ -113,12 +118,37 @@ def Welcome():
     "Ask AI to filter what you need")
 
 def GetLLM():
-    llmChoice = st.selectbox("Choose LLM", ("Gemini (Cloud-based)", "LMStudio (Local)"))
+    llmChoice = st.selectbox("Select LLM", ("Gemini (Cloud-based)", "LMStudio (Local)"))
     if llmChoice == "Gemini (Cloud-based)":
         return ChatGoogleGenerativeAI(model='gemini-2.0-flash-exp', api_key=API_KEY) 
     else:
         st.error("LMStudio functionality not implemented yet.")
         return None
+
+def GetDivision():
+    Options = ["AID IntDes DNU",
+               "BA eBu DNU",
+               "BA HrmMgt DNU",
+               "BA MktInb DNU",
+               "CMS Arabic DNU",
+               "Continuing Education",
+               "DBA",
+               "EAST Tel DNU",
+               "General Education",
+               "MIT DNU",
+               "MKT DNU",
+               "Registrar's Office",
+               "SAID",
+               "SBA",
+               "SCMS",
+               "SEAST",
+               "SEHS",
+               "SGS",
+               "SGS-RPP",
+               ]
+    DivisionChoice = st.selectbox("Select Division", Options, index=Options.index("SEAST"))
+
+    return DivisionChoice
 
 def GetTerm():
     termChoice = st.selectbox("Choose Term", ("FA 2025-26", "SU 1 2024-25", "SP 2024-25"), index=2)
@@ -129,6 +159,14 @@ def AIFinalResultToCourseOfferingsList(FinalResult):
     Parsed:clsCourseOfferings = clsCourseOfferings.model_validate_json(FinalResult)
     OfferingsList = [Course.model_dump() for Course in Parsed.Courses]
     return OfferingsList
+
+def AppendCourseOfferingsToCSV(OfferingsList, FilePath, FieldNames):
+    try:
+        with open(FilePath, "a", newline='', encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=FieldNames)
+            writer.writerows(OfferingsList)
+    except Exception as e:
+        st.error(f"An error occurred while adding data to the CSV file: {e}")
 
 # --- NOT USED ---
 def SaveCourseOfferingsToCSV(CourseOfferingsData:clsCourseOfferings):
@@ -149,14 +187,6 @@ def SaveCourseOfferingsToCSV(CourseOfferingsData:clsCourseOfferings):
     except Exception as e:
         st.error(f"An error occurred while saving the CSV: {e}")
         st.error("Try Again")
-
-def AppendCourseOfferingsToCSV(OfferingsList, FilePath, FieldNames):
-    try:
-        with open(FilePath, "a", newline='', encoding="utf-8") as f:
-            writer = csv.DictWriter(f, fieldnames=FieldNames)
-            writer.writerows(OfferingsList)
-    except Exception as e:
-        st.error(f"An error occurred while adding data to the CSV file: {e}")
 
 # --- NOT USED ---
 async def RunAgent():
@@ -212,7 +242,7 @@ async def ScrapeOfferings():
         Step 2: Select the correct Term specified in sensitive_data.
         Step 3: Click on Course Offering Section
         Step 4: Click on Show Filter
-        Step 5: Select SEAST from Divisions
+        Step 5: Select {DivisionChoice} from Divisions
         Step 6: Apply Filter.
         Step 7: Navigate to page {Page} and wait for it to fully load
         Step 8: Extract only the following info from all courses: Course, Course Name, Credits, Instructor, Room, Days, Start Time, End Time, Max Enrollment, Total Enrollment.
@@ -278,15 +308,44 @@ def LoadFile(File):
         st.error(f"Error reading CSV file: {e}")
         return None
     
-#=====Main Code=====
-st.set_page_config(page_title="3mk Zaid App")
+def QueryAI(Prompt, DataFrame):
 
-if "StudentInfo" not in st.session_state:
+    #give context to the AI so it knows what data it's analyzing
+    context = f"""
+    You are an intelligent and helpful assistant for students at Canadian University Dubai (CUD).
+    Your job is to answer questions about course data based on the table below.
+
+    The data has these columns: {', '.join(DataFrame.columns)}.
+
+    Sample data (use it to guide your answer):
+    {DataFrame.to_string(index=False)}
+
+    Guidelines:
+    - Always try to provide the most relevant answer, even if the question is vague or partially incomplete.
+    - Use fuzzy or partial matching where needed. 
+    - Do not ask for more clarification unless absolutely necessary.
+    - Be concise, helpful, and student-friendly.
+    - Do not hallucinate data — only use what's in the table.
+
+    Question: {Prompt}
+    """
+    
+    model = genai.GenerativeModel('gemini-2.0-flash-exp')
+    response = model.generate_content(context)
+    return response.text
+    
+
+#=====Main Code=====
+
+if "StudentInfo" not in st.session_state:  
     st.session_state.StudentInfo = {
         "username": None,
         "password": None,
-        "term": None
+        "term": None,
     }
+
+if "DataFrame" not in st.session_state:  
+    st.session_state.DataFrame = None
 
 if "Authenticated" not in st.session_state:  
     st.session_state.Authenticated = False
@@ -298,18 +357,18 @@ if not st.session_state.Authenticated:
 else:
     Welcome()
 
-    tab1, tab2, tab3 = st.tabs(["LLM Automation", "Upload & Search", "AI Query"])
+    tab1, tab2, tab3 = st.tabs(["AI Agent Task", "Search & Filter", "AI Query"])
 
     # Automation Tab
     with tab1:
-        st.write("")
+        st.subheader("Settings")
         LLMChoice = GetLLM()
+        DivisionChoice = GetDivision()
 
         st.divider()
 
         st.subheader("Scraping Automation")
-        st.write("The scraping feature is helpful for SEAST students only right now")
-        st.write("You can scrape Course Offerrings with One Click ONLY")
+        st.write("Scrape Course Offerrings with One Click ONLY")
 
         if st.button("Scrape"):
                 with st.spinner("Scraping Course Offerings... Please wait"):
@@ -320,7 +379,7 @@ else:
         st.divider()
 
         st.subheader("Custom Task Automation")
-        st.write("You can run you own AI Agent custom task with One Click ONLY")
+        st.write("Run you own AI Agent custom task")
             
         UserInstruction = st.text_area("Enter automation instruction",
                                        value="Compare prices between DeepSeek and ChatGPT",
@@ -330,17 +389,17 @@ else:
             with st.spinner("Running Custom Task... Please wait"):
                 asyncio.run(RunCustomTaskAutomation())
         
-
-    # Upload & Search Tab
+    # Search & Filter Tab
     with tab2:
-        st.subheader("Explore Course Offerings Data")
+        st.subheader("Search & Filter Course Offerings")
 
         UploadedFile = st.file_uploader("Upload your Course Offerings CSV file", type=["csv"])
 
         if UploadedFile: 
-            LoadedDf = LoadFile(UploadedFile) 
+            LoadedDf = LoadFile(UploadedFile)
+            DataFrame = st.session_state.DataFrame = LoadedDf
 
-            if LoadedDf is not None: 
+            if DataFrame is not None: 
                 st.success("CSV file loaded successfully!")
 
                 st.divider() 
@@ -355,7 +414,7 @@ else:
                     YearOptions = ["All", "1st Year (1xx)", "2nd Year (2xx)", "3rd Year (3xx)", "4th Year (4xx)"]
                     YearFilter = st.selectbox("Filter by Year:", options=YearOptions)
 
-                FilteredDf = LoadedDf.copy()
+                FilteredDf = DataFrame.copy()
 
                 if InstructorSearch:
                     FilteredDf = FilteredDf[FilteredDf['Instructor'].str.contains(InstructorSearch, case=False, na=False)]
@@ -380,9 +439,38 @@ else:
                     st.write(f"Found {len(FilteredDf)} matching course sections:")
                     st.dataframe(FilteredDf)
 
-    with tab3:
-        st.error("Not Implemented Yet")
-        
+    # Ai Query Tab
+    with tab3 :
+        st.subheader("Ask AI for filtering")
+        UploadedFile = st.file_uploader("Upload your Course Offerings CSV file", type=["csv"], key="tab3")
+
+        if UploadedFile: 
+            LoadedDf = LoadFile(UploadedFile)
+            DataFrame = st.session_state.DataFrame = LoadedDf
+            if DataFrame is not None:
+                st.success("CSV file loaded successfully!")
+
+                if st.checkbox("Show Table"):
+                    st.dataframe(DataFrame)
+    
+                st.divider()
+    
+                st.markdown("**Example Questions:**")
+                st.markdown("- Show all courses by Dr. Adel")
+                st.markdown("- What courses are available between 10 AM and 3 PM")
+                st.markdown("- Show all courses in 2nd year")
+    
+                #AI-powered question input
+                if prompt := st.chat_input("Ask about courses (e.g., 'Show Dr. Said's courses')"):
+                    with st.chat_message("user"):
+                        st.write(prompt)
+    
+                    with st.chat_message("assistant"):
+                        with st.spinner("Analyzing..."):
+                            #get AI response
+                            response = QueryAI(prompt, DataFrame)
+                            st.write(response)
+           
     st.divider()
     if st.button("Logout"):
         Logout()
