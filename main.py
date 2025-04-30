@@ -264,7 +264,7 @@ def QueryAI(Prompt, DataFrame):
     return response.text
     
 
-#=====Main Code=====
+#=====Main=====
 
 if "StudentInfo" not in st.session_state:  
     st.session_state.StudentInfo = {
@@ -294,7 +294,7 @@ else:
         LLMChoice = GetLLM()
         DivisionChoice = GetDivision()
 
-        st.divider()
+        st.divider() #___________________________________________________________
 
         st.subheader("Scraping Automation")
         st.write("Scrape Course Offerrings with One Click ONLY")
@@ -305,7 +305,7 @@ else:
                     st.success("Course offerings scraped successfully! CSV saved to Downloads")
 
 
-        st.divider()
+        st.divider() #___________________________________________________________
 
         st.subheader("Custom Task Automation")
         st.write("Run you own AI Agent custom task")
@@ -400,6 +400,7 @@ else:
                             response = QueryAI(prompt, DataFrame)
                             st.write(response)
            
+    
     st.divider()
     if st.button("Logout"):
         Logout()
