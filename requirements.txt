@@ -1,7 +1,9 @@
 streamlit
 pandas
 pydantic
-langchain_google_genai
+langchain
+langchain-google-genai
+google-generativeai
 browser_use
 asyncio
 dotenv
