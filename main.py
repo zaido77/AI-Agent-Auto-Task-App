@@ -5,7 +5,7 @@ import time
 from pydantic import BaseModel
 from typing import List
 from langchain_google_genai import ChatGoogleGenerativeAI
-from browser_use import Agent, Controller, Browser, BrowserConfig
+from browser_use import Agent, Controller
 import asyncio
 import csv
 from dotenv import load_dotenv
@@ -13,12 +13,15 @@ load_dotenv()
 
 API_KEY = os.getenv("GEMINI_API_KEY")
 WEBSITE = os.getenv("WEBSITE")
+USER_NAME = os.getenv("USER_NAME")
+PASSWORD = os.getenv("PASSWORD")
 
 if os.name == 'nt':
 	asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 
 #=====Data & Methods=====
 
+# --- NOT USED ---
 CourseOfferingsTask = f"""
 Step 1: Login to {WEBSITE}
 Step 2: Select the correct Term specified in sensitive_data.
@@ -38,6 +41,7 @@ Step 7: Process pages 1, 2, and 3 sequentially:
 Step 8: Final Output: Compile ALL stored course dictionaries gathered from only pages 1, 2, and 3 into a single JSON object. Return ONLY this JSON object. 
 """ #{ "Courses": [ {course_details_dict_1}, ... ] }
 
+# --- NOT USED ---
 MessageContext = """
 Data Persistence: Remember and accumulate extracted course data across multiple steps and pages.
 Output Format: Always follow the final JSON output format specified in the task: { "Courses": [ list_of_course_dictionaries ] }.
@@ -64,7 +68,7 @@ class clsCourseOfferings(BaseModel):
 controller = Controller(output_model=clsCourseOfferings)
 
 def LoginPage():
-    st.title("CUD Student Portal Login")
+    st.header("CUD Student Portal Login")
     with st.form(key="student_login_form"):
         username = st.text_input("Username", placeholder="202X000XXXX")
         password = st.text_input("Password", type="password")
@@ -75,6 +79,7 @@ def LoginPage():
             if (not username) or (not password) or (not term):
                 st.warning("Please fill in all of the fields")
             else:
+                st.session_state.WelcomeName = username
                 st.session_state.StudentInfo["username"] = username
                 st.session_state.StudentInfo["password"] = password
                 st.session_state.StudentInfo["term"] = term
@@ -82,7 +87,18 @@ def LoginPage():
                 st.success("Login completed successfully")
                 time.sleep(2)
                 st.rerun()  # Rerun to show the next page
-
+    
+    st.write("Dont have account?")
+    if st.button("Login as Guest"):
+        st.session_state.WelcomeName = "Guest"
+        st.session_state.StudentInfo["username"] = USER_NAME
+        st.session_state.StudentInfo["password"] = PASSWORD
+        st.session_state.StudentInfo["term"] = "SP 2024-25"
+        st.session_state.Authenticated = True
+        st.success("Login completed successfully")
+        time.sleep(2)
+        st.rerun()  # Rerun to show the next page
+    
 def Logout():
     st.session_state.Authenticated = False
     if "StudentInfo" in st.session_state:
@@ -91,9 +107,10 @@ def Logout():
 
 def Welcome():
     st.title("Welcome to the Automation App!")
-    st.subheader(f"Hello, {st.session_state.StudentInfo["username"]}!")
-    st.write("Use the tabs below to automatically scrape course offerings from the portal" +
-    " or upload and filter extracted course data.")
+    st.subheader(f"Hello, {st.session_state.WelcomeName}!")
+    st.write("Use the tabs below to run your AI Agent tasks or " +
+    "Upload and filter extracted course data or " +
+    "Ask AI to filter what you need")
 
 def GetLLM():
     llmChoice = st.selectbox("Choose LLM", ("Gemini (Cloud-based)", "LMStudio (Local)"))
@@ -108,17 +125,12 @@ def GetTerm():
 
     return termChoice
 
-def AIFinalResultToCourseOfferingsObject(FinalResult):
-    AllCourses = []
-    if FinalResult:
-        ParsedCourses = clsCourseOfferings.model_validate_json(FinalResult)
+def AIFinalResultToCourseOfferingsList(FinalResult):
+    Parsed:clsCourseOfferings = clsCourseOfferings.model_validate_json(FinalResult)
+    OfferingsList = [Course.model_dump() for Course in Parsed.Courses]
+    return OfferingsList
 
-        for Course in ParsedCourses.Courses:
-            AllCourses.append(Course)
-        return clsCourseOfferings(Courses=AllCourses)
-    
-    return None 
-
+# --- NOT USED ---
 def SaveCourseOfferingsToCSV(CourseOfferingsData:clsCourseOfferings):
     TermStr = str(st.session_state.StudentInfo.get('term')).replace(' ', '_')
     FileName = f"course_offerings_{TermStr}.csv"
@@ -138,6 +150,15 @@ def SaveCourseOfferingsToCSV(CourseOfferingsData:clsCourseOfferings):
         st.error(f"An error occurred while saving the CSV: {e}")
         st.error("Try Again")
 
+def AppendCourseOfferingsToCSV(OfferingsList, FilePath, FieldNames):
+    try:
+        with open(FilePath, "a", newline='', encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=FieldNames)
+            writer.writerows(OfferingsList)
+    except Exception as e:
+        st.error(f"An error occurred while adding data to the CSV file: {e}")
+
+# --- NOT USED ---
 async def RunAgent():
     agent = Agent(
     task=UserInstruction,
@@ -147,18 +168,107 @@ async def RunAgent():
     message_context=MessageContext
     )
     
-    with st.spinner("Scraping Course Offerings..."):
+    with st.spinner("Scraping Course Offerings... Please wait"):
         history = await agent.run(max_steps=100)
         finalResult = history.final_result()
         if finalResult:
-            CourseOfferingsData:clsCourseOfferings = AIFinalResultToCourseOfferingsObject(finalResult)
+            CourseOfferingsData:clsCourseOfferings = AIFinalResultToCourseOfferingsList(finalResult)
             if CourseOfferingsData:
                 SaveCourseOfferingsToCSV(CourseOfferingsData)
             else:
                 st.error("Error: Failed to retrieve course offerings")
         else:
             st.error("An error occured while scraping course offerings")
+
+async def ScrapeOfferings():
+    TermStr = str(st.session_state.StudentInfo.get('term')).replace(' ', '_')
+    FileName = f"course_offerings_{TermStr}.csv"
+    if os.access("/sdcard/Download", os.W_OK):  # Android
+        FilePath = os.path.join("/sdcard/Download", FileName)
+    elif os.name == 'nt':  # Windows
+        FilePath = os.path.join(os.path.expanduser("~"), "Downloads", FileName)
+    else:  # Other systems (Linux, Mac, etc.)
+        FilePath = os.path.join("/tmp", FileName)
+
+    #define CSV column headers
+    FieldNames = [
+    "CourseCode", "CourseName", "Credits", "Instructor", "Room", "Day",
+    "StartTime", "EndTime", "MaxEnrollment", "TotalEnrollment"
+    ]
+
+
+    #create a new CSV file with the headers
+    with open(FilePath, "w", newline='', encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=FieldNames)
+        writer.writeheader()
+
+    Page = 1 #start from the first page
+
+    #keep looping through all course pages
+    while True:
+        #instructions for the agent
+        Task = f"""
+        Step 1: Login to {WEBSITE}
+        Step 2: Select the correct Term specified in sensitive_data.
+        Step 3: Click on Course Offering Section
+        Step 4: Click on Show Filter
+        Step 5: Select SEAST from Divisions
+        Step 6: Apply Filter.
+        Step 7: Navigate to page {Page} and wait for it to fully load
+        Step 8: Extract only the following info from all courses: Course, Course Name, Credits, Instructor, Room, Days, Start Time, End Time, Max Enrollment, Total Enrollment.
+
+        Only extract data if you are 100% sure the page number is {Page}.  
+        If the page number shown is not {Page}, stop and return nothing.
+        """
+        #extra guidance for the LLM on how to behave
+        MessageContext = f"""
+        Only extract data if you are 100% sure the page number is {Page}. 
+        If the page number shown is not {Page}, stop and return nothing.
+        Output Format: Always follow the JSON output format
+        Wait Time: Introduce a brief delay (1 second) before performing actions like clicks or navigation to allow pages to load.
+        Error Handling: If data for a field is missing (e.g., no instructor listed), represent it appropriately (e.g., empty string or null) but still include the course entry.
+        """
+
+        #set up the agent with the scraping task, LLM, data controller, and instructions
+        agent = Agent(
+        task=Task,
+        llm=LLMChoice,
+        sensitive_data=st.session_state.StudentInfo,
+        controller=controller,
+        message_context=MessageContext
+        )
+
+        try:
+            #run the agent to do the work
+            history = await agent.run()
+            FinalResult = history.final_result()
+
+            if not FinalResult:
+                break
+
+            OfferingsList = AIFinalResultToCourseOfferingsList(FinalResult)
+
+            if not OfferingsList:
+                break
+
+            AppendCourseOfferingsToCSV(OfferingsList, FilePath, FieldNames)
+
+            Page += 1  #move to the next page
+
+        except Exception:
+            break  
+
+async def RunCustomTaskAutomation():
+    agent = Agent(
+    task=UserInstruction,
+    llm=LLMChoice
+    )
     
+    history = await agent.run(max_steps=100)
+    finalResult = history.final_result()
+    if finalResult:
+        st.info("AI Agent: " + finalResult)
+
 @st.cache_data
 def LoadFile(File):
     try:
@@ -192,15 +302,34 @@ else:
 
     # Automation Tab
     with tab1:
-        st.subheader("AI Agent Task Automation")
-        st.write("You can scrape Course Offerrings with One Click ONLY" +
-        " or you can enter you own custom instruction")
-
+        st.write("")
         LLMChoice = GetLLM()
-        UserInstruction = st.text_area("Enter automation instruction", value=CourseOfferingsTask, height=300)
+
+        st.divider()
+
+        st.subheader("Scraping Automation")
+        st.write("The scraping feature is helpful for SEAST students only right now")
+        st.write("You can scrape Course Offerrings with One Click ONLY")
+
+        if st.button("Scrape"):
+                with st.spinner("Scraping Course Offerings... Please wait"):
+                    asyncio.run(ScrapeOfferings())
+                    st.success("Course offerings scraped successfully! CSV saved to Downloads")
+
+
+        st.divider()
+
+        st.subheader("Custom Task Automation")
+        st.write("You can run you own AI Agent custom task with One Click ONLY")
+            
+        UserInstruction = st.text_area("Enter automation instruction",
+                                       value="Compare prices between DeepSeek and ChatGPT",
+                                       height=68)
         
         if st.button("Run"):
-            asyncio.run(RunAgent())
+            with st.spinner("Running Custom Task... Please wait"):
+                asyncio.run(RunCustomTaskAutomation())
+        
 
     # Upload & Search Tab
     with tab2:
