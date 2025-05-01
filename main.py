@@ -400,6 +400,38 @@ else:
                             response = QueryAI(prompt, DataFrame)
                             st.write(response)
            
+    # Ai Query Tab
+    with tab3 :
+        st.subheader("Ask AI for filtering")
+        UploadedFile = st.file_uploader("Upload your Course Offerings CSV file", type=["csv"], key="tab3")
+
+        if UploadedFile: 
+            LoadedDf = LoadFile(UploadedFile)
+            DataFrame = st.session_state.DataFrame = LoadedDf
+            if DataFrame is not None:
+                st.success("CSV file loaded successfully!")
+
+                if st.checkbox("Show Table"):
+                    st.dataframe(DataFrame)
+    
+                st.divider()
+    
+                st.markdown("**Example Questions:**")
+                st.markdown("- Show all courses by Dr. Adel")
+                st.markdown("- What courses are available between 10 AM and 3 PM")
+                st.markdown("- Show all courses in 2nd year")
+    
+                #AI-powered question input
+                if prompt := st.chat_input("Ask about courses (e.g., 'Show Dr. Said's courses')"):
+                    with st.chat_message("user"):
+                        st.write(prompt)
+    
+                    with st.chat_message("assistant"):
+                        with st.spinner("Analyzing..."):
+                            #get AI response
+                            response = QueryAI(prompt, DataFrame)
+                            st.write(response)
+           
     
     st.divider()
     if st.button("Logout"):

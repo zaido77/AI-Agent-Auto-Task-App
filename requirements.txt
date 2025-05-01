@@ -1,7 +1,6 @@
 streamlit
 pandas
 pydantic
-<<<<<<< HEAD
 langchain
 langchain-google-genai
 google-generativeai
@@ -9,10 +8,3 @@ browser_use
 asyncio
 dotenv
 playwright
-=======
-langchain_google_genai
-browser_use
-asyncio
-dotenv
-playwright
->>>>>>> 7c8edb0 (Updated)
