@@ -8,4 +8,3 @@ browser_use
 asyncio
 dotenv
 playwright
-playwright install chromium
