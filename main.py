@@ -371,7 +371,7 @@ else:
     # Ai Query Tab
     with tab3 :
         st.subheader("Ask AI for filtering")
-        UploadedFile = st.file_uploader("Upload your Course Offerings CSV file", type=["csv"], key="tab3")
+        UploadedFile = st.file_uploader("Upload your Course Offerings CSV file", type=["csv", "xlsx"], key="tab3")
 
         if UploadedFile: 
             LoadedDf = LoadFile(UploadedFile)
