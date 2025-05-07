@@ -24,3 +24,9 @@ playwright install
 ```
 
 ⚠️ **Note:** The scraping feature won't work on Streamlit Community Cloud due to limitations with headless browser automation (Playwright). Run the app locally for full functionality.
+
+## License
+
+This project is licensed under the [Creative Commons Attribution-NonCommercial 4.0 International License](https://creativecommons.org/licenses/by-nc/4.0/).
+
+You are free to use and modify this software for personal and educational purposes, but **commercial use is not allowed**.
