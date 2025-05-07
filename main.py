@@ -9,16 +9,12 @@ from browser_use import Agent, Controller
 import asyncio
 import csv
 import google.generativeai as genai
-from dotenv import load_dotenv
-load_dotenv()
-
-WEBSITE = os.getenv("WEBSITE")
 
 # if system is windows
 if os.name == 'nt':
 	asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 
-st.set_page_config(page_title="Automation App", page_icon="CUDLogo.png")
+st.set_page_config(page_title="AutoTask App", page_icon="CUDLogo.png")
 #=====Data & Methods=====
 
 class Course(BaseModel):
@@ -75,7 +71,7 @@ def Logout():
     st.rerun()
 
 def Welcome():
-    st.title("Welcome to the Automation App!")
+    st.title("Welcome to the AutoTask App!")
     st.subheader(f"Hello, {st.session_state.WelcomeName}!")
     st.write("This app helps CUD students to easily scrape their course offerings and filter them as they want")
     st.write("Use the tabs below to run your AI Agent tasks or " +
@@ -164,7 +160,7 @@ async def ScrapeOfferings():
     while True:
         #instructions for the agent
         Task = f"""
-        Step 1: Login to {WEBSITE}
+        Step 1: Login to "https://cudportal.cud.ac.ae/student/login.asp"
         Step 2: Select the correct Term specified in sensitive_data.
         Step 3: Click on Course Offering Section
         Step 4: Click on Show Filter
@@ -281,7 +277,7 @@ if "Authenticated" not in st.session_state:
 if not st.session_state.Authenticated:
     LoginPage()
 
-# Automation App Page
+# AutoTask App Page
 else:
     Welcome()
 
