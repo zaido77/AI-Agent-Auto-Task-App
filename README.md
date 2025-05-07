@@ -21,5 +21,6 @@
 ```bash
 pip install -r requirements.txt
 playwright install
+```
 
-> ⚠️ **Note:** The scraping feature won't work on Streamlit Community Cloud due to limitations with headless browser automation (Playwright). Run the app locally for full functionality.
+⚠️ **Note:** The scraping feature won't work on Streamlit Community Cloud due to limitations with headless browser automation (Playwright). Run the app locally for full functionality.
