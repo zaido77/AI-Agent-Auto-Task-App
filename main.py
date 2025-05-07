@@ -12,21 +12,16 @@ import google.generativeai as genai
 from dotenv import load_dotenv
 load_dotenv()
 
-API_KEY = os.getenv("GEMINI_API_KEY")
 WEBSITE = os.getenv("WEBSITE")
-USER_NAME = os.getenv("USER_NAME")
-PASSWORD = os.getenv("PASSWORD")
-
-genai.configure(api_key=API_KEY)
 
 # if system is windows
 if os.name == 'nt':
 	asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 
-st.set_page_config(page_title="Automation App", page_icon="CUD.png")
+st.set_page_config(page_title="Automation App", page_icon="CUDLogo.png")
 #=====Data & Methods=====
 
-class clsCourse(BaseModel):
+class Course(BaseModel):
     CourseCode: str
     CourseName: str
     Credits: str
@@ -38,10 +33,10 @@ class clsCourse(BaseModel):
     MaxEnrollment: int
     TotalEnrollment: int
 
-class clsCourseOfferings(BaseModel):
-    Courses: List[clsCourse]
+class CourseOfferings(BaseModel):
+    Courses: List[Course]
 
-controller = Controller(output_model=clsCourseOfferings)
+controller = Controller(output_model=CourseOfferings)
 
 def LoginPage():
     st.header("CUD Student Portal Login")
@@ -67,8 +62,6 @@ def LoginPage():
     st.write("Dont have account?")
     if st.button("Login as Guest"):
         st.session_state.WelcomeName = "Guest"
-        st.session_state.StudentInfo["username"] = USER_NAME
-        st.session_state.StudentInfo["password"] = PASSWORD
         st.session_state.StudentInfo["term"] = "SP 2024-25"
         st.session_state.Authenticated = True
         st.success("Login completed successfully")
@@ -90,12 +83,15 @@ def Welcome():
     "Ask AI to filter what you need")
 
 def GetLLM():
-    llmChoice = st.selectbox("Select LLM", ("Gemini (Cloud-based)", "LMStudio (Local)"))
-    if llmChoice == "Gemini (Cloud-based)":
-        return ChatGoogleGenerativeAI(model='gemini-2.0-flash-exp', api_key=API_KEY) 
+    st.markdown("To get your Gemini API key click [here](https://aistudio.google.com/apikey). Copy and Paste it below.")
+    api_key = st.text_input("Enter Gemini API Key", type="password")
+    if api_key:
+        st.session_state.apiKey = api_key
+        genai.configure(api_key=st.session_state.apiKey)
+        return ChatGoogleGenerativeAI(model='gemini-2.0-flash-exp', api_key=st.session_state.apiKey)
     else:
-        st.error("LMStudio functionality not implemented yet.")
-        return None
+        st.warning("Please enter your Gemini API key.")
+    return None
 
 def GetDivision():
     Options = ["AID IntDes DNU",
@@ -128,7 +124,7 @@ def GetTerm():
     return termChoice
 
 def AIFinalResultToCourseOfferingsList(FinalResult):
-    Parsed:clsCourseOfferings = clsCourseOfferings.model_validate_json(FinalResult)
+    Parsed:CourseOfferings = CourseOfferings.model_validate_json(FinalResult)
     OfferingsList = [Course.model_dump() for Course in Parsed.Courses]
     return OfferingsList
 
@@ -228,6 +224,8 @@ async def RunCustomTaskAutomation():
     finalResult = history.final_result()
     if finalResult:
         st.info("AI Agent: " + finalResult)
+    else:
+        st.error("Something went wrong, check your API Key")
 
 @st.cache_data
 def LoadFile(File):
@@ -291,22 +289,26 @@ else:
 
     # Automation Tab
     with tab1:
-        st.subheader("Settings")
+        st.subheader("Gemini AI Setting")
         LLMChoice = GetLLM()
-        DivisionChoice = GetDivision()
 
-        st.divider() #___________________________________________________________
+        st.divider() 
 
         st.subheader("Scraping Automation")
+        DivisionChoice = GetDivision()
+
         st.write("Scrape Course Offerrings with One Click ONLY")
 
         if st.button("Scrape"):
+            if st.session_state.WelcomeName == "Guest":
+                st.error("This feature is allowed for CUD students only")
+            else:
                 with st.spinner("Scraping Course Offerings... Please wait"):
                     asyncio.run(ScrapeOfferings())
                     st.success("Course offerings scraped successfully! CSV saved to Downloads")
 
 
-        st.divider() #___________________________________________________________
+        st.divider() 
 
         st.subheader("Custom Task Automation")
         st.write("Run you own AI Agent custom task")
@@ -323,7 +325,7 @@ else:
     with tab2:
         st.subheader("Search & Filter Course Offerings")
 
-        UploadedFile = st.file_uploader("Upload your Course Offerings CSV file", type=["csv"])
+        UploadedFile = st.file_uploader("Upload your Course Offerings CSV file", type=["csv", "xlsx"])
 
         if UploadedFile: 
             LoadedDf = LoadFile(UploadedFile)
