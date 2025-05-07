@@ -1,14 +1,14 @@
-# Automation App
+# AutoTask App
 
-**Automation App** is a Streamlit web app that scrapes course offerings from the [Canadian University Dubai (CUD)] and answers user questions using Google Gemini AI.
+**AutoTask App** is a Streamlit web app that help CUD students to scrape course offerings from the [Student Portal](https://cudportal.cud.ac.ae/student/login.asp) using AI Agents and ask questions about them, making it easier to explore, filter, and understand available courses in a conversational way.
 
 ## 🚀 Features
 
 - Login securely with your CUD credentials  
 - Scrape and view current course offerings  
 - Download results as a CSV file  
-- Ask questions about courses using Gemini AI  
 - Filter and search through offerings interactively  
+- Ask questions about courses using Gemini AI  
 
 ## 🛠️ Requirements
 
