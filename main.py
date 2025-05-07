@@ -84,6 +84,7 @@ def Logout():
 def Welcome():
     st.title("Welcome to the Automation App!")
     st.subheader(f"Hello, {st.session_state.WelcomeName}!")
+    st.write("This app helps CUD students to easily scrape their course offerings and filter them as they want")
     st.write("Use the tabs below to run your AI Agent tasks or " +
     "Upload and filter extracted course data or " +
     "Ask AI to filter what you need")
@@ -337,7 +338,7 @@ else:
                 col1, col2 = st.columns(2) 
 
                 with col1:
-                    InstructorSearch = st.text_input("Search by Instructor Name (contains):")
+                    FilterSearch = st.text_input("Filter Search (contains):")
 
                 with col2:
                     YearOptions = ["All", "1st Year (1xx)", "2nd Year (2xx)", "3rd Year (3xx)", "4th Year (4xx)"]
@@ -345,8 +346,11 @@ else:
 
                 FilteredDf = DataFrame.copy()
 
-                if InstructorSearch:
-                    FilteredDf = FilteredDf[FilteredDf['Instructor'].str.contains(InstructorSearch, case=False, na=False)]
+                if FilterSearch:
+                    mask = FilteredDf.apply(
+                        lambda row: row.astype(str).str.contains(FilterSearch, case=False, na=False).any(), axis=1
+                    )
+                    FilteredDf = FilteredDf[mask]
 
                 if YearFilter != "All":
                     if YearFilter == "1st Year (1xx)":
