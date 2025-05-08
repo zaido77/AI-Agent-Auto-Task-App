@@ -55,10 +55,9 @@ def LoginPage():
                 time.sleep(2)
                 st.rerun()  # Rerun to show the next page
     
-    st.write("Dont have account?")
+    st.write("Not CUD Student?")
     if st.button("Login as Guest"):
         st.session_state.WelcomeName = "Guest"
-        st.session_state.StudentInfo["term"] = "SP 2024-25"
         st.session_state.Authenticated = True
         st.success("Login completed successfully")
         time.sleep(2)
@@ -76,7 +75,7 @@ def Welcome():
     st.write("This app helps CUD students to easily scrape their course offerings and filter them as they want")
     st.write("Use the tabs below to run your AI Agent tasks or " +
     "Upload and filter extracted course data or " +
-    "Ask AI to filter what you need")
+    "Ask AI about the courses")
 
 def GetLLM():
     st.markdown("To get your Gemini API key click [here](https://aistudio.google.com/apikey). Copy and Paste it below.")
@@ -223,6 +222,54 @@ async def RunCustomTaskAutomation():
     else:
         st.error("Something went wrong, check your API Key")
 
+def FilterProcess():
+    col1, col2 = st.columns(2) 
+    with col1:
+        FilterSearch = st.text_input("Filter Search (contains):")
+    with col2:
+        YearOptions = ["All", "1st Year (1xx)", "2nd Year (2xx)", "3rd Year (3xx)", "4th Year (4xx)"]
+        YearFilter = st.selectbox("Filter by Year:", options=YearOptions)
+    FilteredDf = DataFrame.copy()
+    if FilterSearch:
+        mask = FilteredDf.apply(
+            lambda row: row.astype(str).str.contains(FilterSearch, case=False, na=False).any(), axis=1
+        )
+        FilteredDf = FilteredDf[mask]
+    if YearFilter != "All":
+        if YearFilter == "1st Year (1xx)":
+            FilteredDf = FilteredDf[FilteredDf['CourseCode'].str[3] == '1']
+        elif YearFilter == "2nd Year (2xx)":
+            FilteredDf = FilteredDf[FilteredDf['CourseCode'].str[3] == '2']
+        elif YearFilter == "3rd Year (3xx)":
+            FilteredDf = FilteredDf[FilteredDf['CourseCode'].str[3] == '3']
+        elif YearFilter == "4th Year (4xx)":
+            FilteredDf = FilteredDf[FilteredDf['CourseCode'].str[3] == '4']
+    # Display Filtered Results
+    st.subheader("Filtered Results")
+    if FilteredDf.empty: 
+        st.warning("No courses match your current filter criteria")
+    else:
+        st.write(f"Found {len(FilteredDf)} matching course sections:")
+        st.dataframe(FilteredDf)
+
+def AIQueryProcess():
+    st.markdown("**Example Questions:**")
+    st.markdown("- Show all courses by Dr. Adel")
+    st.markdown("- What courses are available between 10 AM and 3 PM")
+    st.markdown("- Show all courses in 2nd year")
+    #AI-powered question input
+    if prompt := st.chat_input("Ask about courses (e.g., 'Show Dr. Said's courses')"):
+        if not st.session_state.APIKey:
+            st.error("Check your API Key")
+        else:
+            with st.chat_message("user"):
+                st.write(prompt)
+            with st.chat_message("assistant"):
+                with st.spinner("Analyzing..."):
+                    #get AI response
+                    response = QueryAI(prompt, DataFrame)
+                    st.write(response)
+                
 @st.cache_data
 def LoadFile(File):
     try:
@@ -258,21 +305,25 @@ def QueryAI(Prompt, DataFrame):
     response = model.generate_content(context)
     return response.text
     
+def SetSessionStates():
+    if "StudentInfo" not in st.session_state:  
+        st.session_state.StudentInfo = {
+            "username": None,
+            "password": None,
+            "term": None,
+        }
 
+    if "DataFrame" not in st.session_state:  
+        st.session_state.DataFrame = None
+
+    if "Authenticated" not in st.session_state:  
+        st.session_state.Authenticated = False
+
+    if "APIKey" not in st.session_state:
+        st.session_state.APIKey = None
 #=====Main=====
 
-if "StudentInfo" not in st.session_state:  
-    st.session_state.StudentInfo = {
-        "username": None,
-        "password": None,
-        "term": None,
-    }
-
-if "DataFrame" not in st.session_state:  
-    st.session_state.DataFrame = None
-
-if "Authenticated" not in st.session_state:  
-    st.session_state.Authenticated = False
+SetSessionStates()
 
 if not st.session_state.Authenticated:
     LoginPage()
@@ -281,11 +332,11 @@ if not st.session_state.Authenticated:
 else:
     Welcome()
 
-    tab1, tab2, tab3 = st.tabs(["AI Agent Task", "Search & Filter", "AI Query"])
+    tab1, tab2 = st.tabs(["AI Agent Task", "Search & Filter And AI Query"])
 
     # AI Automation Tab
     with tab1:
-        st.subheader("Gemini AI Setting")
+        st.subheader("⚙️ Gemini AI Setting")
         LLMChoice = GetLLM()
 
         st.divider() 
@@ -318,8 +369,18 @@ else:
                 asyncio.run(RunCustomTaskAutomation())
         
     # Search & Filter Tab
-    with tab2:
-        st.subheader("Search & Filter Course Offerings")
+    with tab2:        
+        st.subheader("Download & Upload")
+        st.write("If you're a guest, you can try the app using the sample course offerings below:")
+
+        SampleCSVFile = "course_offerings_SP_2024-25.csv"
+        with open(SampleCSVFile, "rb") as f:
+            st.download_button(
+                label="Download",
+                data=f,
+                file_name="course_offerings_SP_2024-25.csv",
+                mime="text/csv"
+            )
 
         UploadedFile = st.file_uploader("Upload your Course Offerings CSV file", type=["csv"])
 
@@ -329,78 +390,15 @@ else:
 
             if DataFrame is not None: 
                 st.success("CSV file loaded successfully!")
-
-                st.divider() 
-                st.subheader("Filter Courses")
-                
-                col1, col2 = st.columns(2) 
-
-                with col1:
-                    FilterSearch = st.text_input("Filter Search (contains):")
-
-                with col2:
-                    YearOptions = ["All", "1st Year (1xx)", "2nd Year (2xx)", "3rd Year (3xx)", "4th Year (4xx)"]
-                    YearFilter = st.selectbox("Filter by Year:", options=YearOptions)
-
-                FilteredDf = DataFrame.copy()
-
-                if FilterSearch:
-                    mask = FilteredDf.apply(
-                        lambda row: row.astype(str).str.contains(FilterSearch, case=False, na=False).any(), axis=1
-                    )
-                    FilteredDf = FilteredDf[mask]
-
-                if YearFilter != "All":
-                    if YearFilter == "1st Year (1xx)":
-                        FilteredDf = FilteredDf[FilteredDf['CourseCode'].str[3] == '1']
-                    elif YearFilter == "2nd Year (2xx)":
-                        FilteredDf = FilteredDf[FilteredDf['CourseCode'].str[3] == '2']
-                    elif YearFilter == "3rd Year (3xx)":
-                        FilteredDf = FilteredDf[FilteredDf['CourseCode'].str[3] == '3']
-                    elif YearFilter == "4th Year (4xx)":
-                        FilteredDf = FilteredDf[FilteredDf['CourseCode'].str[3] == '4']
-
-                # Display Filtered Results
-                st.divider() 
-                st.subheader("Filtered Results")
-
-                if FilteredDf.empty: 
-                    st.warning("No courses match your current filter criteria")
-                else:
-                    st.write(f"Found {len(FilteredDf)} matching course sections:")
-                    st.dataframe(FilteredDf)
-
-    # Ai Query Tab
-    with tab3 :
-        st.subheader("Ask AI for filtering")
-        UploadedFile = st.file_uploader("Upload your Course Offerings CSV file", type=["csv"], key="tab3")
-
-        if UploadedFile: 
-            LoadedDf = LoadFile(UploadedFile)
-            DataFrame = st.session_state.DataFrame = LoadedDf
-            if DataFrame is not None:
-                st.success("CSV file loaded successfully!")
-
-                if st.checkbox("Show Table"):
-                    st.dataframe(DataFrame)
-    
                 st.divider()
-    
-                st.markdown("**Example Questions:**")
-                st.markdown("- Show all courses by Dr. Adel")
-                st.markdown("- What courses are available between 10 AM and 3 PM")
-                st.markdown("- Show all courses in 2nd year")
-    
-                #AI-powered question input
-                if prompt := st.chat_input("Ask about courses (e.g., 'Show Dr. Said's courses')"):
-                    with st.chat_message("user"):
-                        st.write(prompt)
-    
-                    with st.chat_message("assistant"):
-                        with st.spinner("Analyzing..."):
-                            #get AI response
-                            response = QueryAI(prompt, DataFrame)
-                            st.write(response)
+
+                st.header("🔍 Search & Filter Course Offerings")
+                st.subheader("Filter Courses")
+                FilterProcess()
+
+            st.divider()                
+            st.header("🤖 Ask AI about Courses")
+            AIQueryProcess()
 
     st.divider()
     if st.button("Logout"):

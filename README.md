@@ -23,7 +23,7 @@ pip install -r requirements.txt
 playwright install
 ```
 
-⚠️ **Note:** The scraping feature won't work on Streamlit Community Cloud due to limitations with headless browser automation (Playwright). Run the app locally for full functionality.
+⚠️ **Note:** Due to browser automation limitations, the scraping feature and custom automation via Gemini will not work on Streamlit Cloud. To use these features, please run the app locally.
 
 ## License
 
