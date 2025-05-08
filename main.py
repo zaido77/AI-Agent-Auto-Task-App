@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import os
-import sys
 import time
 from pydantic import BaseModel
 from typing import List
@@ -10,9 +9,6 @@ from browser_use import Agent, Controller
 import asyncio
 import csv
 import google.generativeai as genai
-
-# Ensure local repository (browser_use) is accessible
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # if system is windows
 if os.name == 'nt':
