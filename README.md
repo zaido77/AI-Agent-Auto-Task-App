@@ -25,6 +25,10 @@ playwright install
 
 ⚠️ **Note:** Due to browser automation limitations, the scraping feature and custom automation via Gemini will not work on Streamlit Cloud. To use these features, please run the app locally.
 
+```bash
+streamlit run main.py
+```
+
 ## License
 
 This project is licensed under the [Creative Commons Attribution-NonCommercial 4.0 International License](https://creativecommons.org/licenses/by-nc/4.0/).
