@@ -14,7 +14,7 @@ import google.generativeai as genai
 if os.name == 'nt':
 	asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 
-st.set_page_config(page_title="AutoTask App", page_icon="CUDLogo.png")
+st.set_page_config(page_title="AutoTask App", page_icon="utils/CUDLogo.png")
 #=====Data & Methods=====
 
 class Course(BaseModel):
@@ -373,8 +373,8 @@ else:
         st.subheader("Download & Upload")
         st.write("If you're a guest, you can try the app using the sample course offerings below:")
 
-        SampleCSVFile = "course_offerings_SP_2024-25.csv"
-        with open(SampleCSVFile, "rb") as f:
+        SampleCSVFilePath = "utils/course_offerings_SP_2024-25.csv"
+        with open(SampleCSVFilePath, "rb") as f:
             st.download_button(
                 label="Download",
                 data=f,
