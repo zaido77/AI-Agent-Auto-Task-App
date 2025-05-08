@@ -361,7 +361,7 @@ else:
         st.write("Run you own AI Agent custom task")
             
         UserInstruction = st.text_area("Enter automation instruction",
-                                       value="Compare prices between DeepSeek and ChatGPT",
+                                       value="Compare prices between gpt-4o and DeepSeek-V3",
                                        height=68)
         
         if st.button("Run"):
