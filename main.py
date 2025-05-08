@@ -283,7 +283,7 @@ else:
 
     tab1, tab2, tab3 = st.tabs(["AI Agent Task", "Search & Filter", "AI Query"])
 
-    # Automation Tab
+    # AI Automation Tab
     with tab1:
         st.subheader("Gemini AI Setting")
         LLMChoice = GetLLM()
@@ -321,7 +321,7 @@ else:
     with tab2:
         st.subheader("Search & Filter Course Offerings")
 
-        UploadedFile = st.file_uploader("Upload your Course Offerings CSV file", type=["csv", "xlsx"])
+        UploadedFile = st.file_uploader("Upload your Course Offerings CSV file", type=["csv"])
 
         if UploadedFile: 
             LoadedDf = LoadFile(UploadedFile)
@@ -373,7 +373,7 @@ else:
     # Ai Query Tab
     with tab3 :
         st.subheader("Ask AI for filtering")
-        UploadedFile = st.file_uploader("Upload your Course Offerings CSV file", type=["csv", "xlsx"], key="tab3")
+        UploadedFile = st.file_uploader("Upload your Course Offerings CSV file", type=["csv"], key="tab3")
 
         if UploadedFile: 
             LoadedDf = LoadFile(UploadedFile)
