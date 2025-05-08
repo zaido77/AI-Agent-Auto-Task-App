@@ -371,7 +371,7 @@ else:
     # Search & Filter Tab
     with tab2:        
         st.subheader("Download & Upload")
-        st.write("If you're a guest, you can try filtering and AI Query using the sample course offerings below:")
+        st.write("If you're a Guest, you can try Filtering and AI Query by downloading the sample course offerings below:")
 
         SampleCSVFilePath = "utils/course_offerings_SP_2024-25.csv"
         with open(SampleCSVFilePath, "rb") as f:
