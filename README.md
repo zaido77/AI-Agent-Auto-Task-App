@@ -1,6 +1,6 @@
 # AutoTask App
 
-**AutoTask App** is a Streamlit web app that help CUD students to scrape course offerings from the [Student Portal](https://cudportal.cud.ac.ae/student/login.asp) using AI Agents and ask questions about them, making it easier to explore, filter, and understand available courses in a conversational way.
+**AutoTask App** is a Streamlit web app that help CUD students to scrape course offerings from the [Student Portal](https://cudportal.cud.ac.ae/student/login.asp) using AI Agents and filter them, making it easier to explore, filter, and understand available courses in a conversational way.
 
 ## 🚀 Features
 
@@ -8,7 +8,6 @@
 - Scrape and view current course offerings  
 - Download results as a CSV file  
 - Filter and search through offerings interactively  
-- Ask questions about courses using Gemini AI  
 
 ## 🛠️ Requirements
 
@@ -28,9 +27,3 @@ playwright install
 ```bash
 streamlit run main.py
 ```
-
-## License
-
-This project is licensed under the [Creative Commons Attribution-NonCommercial 4.0 International License](https://creativecommons.org/licenses/by-nc/4.0/).
-
-You are free to use and modify this software for personal and educational purposes, but **commercial use is not allowed**.

@@ -251,25 +251,7 @@ def FilterProcess():
     else:
         st.write(f"Found {len(FilteredDf)} matching course sections:")
         st.dataframe(FilteredDf)
-
-def AIQueryProcess():
-    st.markdown("**Example Questions:**")
-    st.markdown("- Show all courses by Dr. Adel")
-    st.markdown("- What courses are available between 10 AM and 3 PM")
-    st.markdown("- Show all courses in 2nd year")
-    #AI-powered question input
-    if prompt := st.chat_input("Ask about courses (e.g., 'Show Dr. Said's courses')"):
-        if not st.session_state.APIKey:
-            st.error("Check your API Key")
-        else:
-            with st.chat_message("user"):
-                st.write(prompt)
-            with st.chat_message("assistant"):
-                with st.spinner("Analyzing..."):
-                    #get AI response
-                    response = QueryAI(prompt, DataFrame)
-                    st.write(response)
-                
+               
 @st.cache_data
 def LoadFile(File):
     try:
@@ -278,33 +260,7 @@ def LoadFile(File):
     except Exception as e:
         st.error(f"Error reading CSV file: {e}")
         return None
-    
-def QueryAI(Prompt, DataFrame):
-
-    #give context to the AI so it knows what data it's analyzing
-    context = f"""
-    You are an intelligent and helpful assistant for students at Canadian University Dubai (CUD).
-    Your job is to answer questions about course data based on the table below.
-
-    The data has these columns: {', '.join(DataFrame.columns)}.
-
-    Sample data (use it to guide your answer):
-    {DataFrame.to_string(index=False)}
-
-    Guidelines:
-    - Always try to provide the most relevant answer, even if the question is vague or partially incomplete.
-    - Use fuzzy or partial matching where needed. 
-    - Do not ask for more clarification unless absolutely necessary.
-    - Be concise, helpful, and student-friendly.
-    - Do not hallucinate data — only use what's in the table.
-
-    Question: {Prompt}
-    """
-    
-    model = genai.GenerativeModel('gemini-2.0-flash-exp')
-    response = model.generate_content(context)
-    return response.text
-    
+       
 def SetSessionStates():
     if "StudentInfo" not in st.session_state:  
         st.session_state.StudentInfo = {
@@ -332,7 +288,7 @@ if not st.session_state.Authenticated:
 else:
     Welcome()
 
-    tab1, tab2 = st.tabs(["AI Agent Task", "Search & Filter And AI Query"])
+    tab1, tab2 = st.tabs(["AI Agent Task", "Search & Filter"])
 
     # AI Automation Tab
     with tab1:
@@ -371,7 +327,7 @@ else:
     # Search & Filter Tab
     with tab2:        
         st.subheader("Download & Upload")
-        st.write("If you're a Guest, you can try Filtering and AI Query by downloading the sample course offerings below:")
+        st.write("If you're a Guest, you can try Filtering by downloading the sample course offerings below:")
 
         SampleCSVFilePath = "utils/course_offerings_SP_2024-25.csv"
         with open(SampleCSVFilePath, "rb") as f:
@@ -395,10 +351,6 @@ else:
                 st.header("🔍 Search & Filter Course Offerings")
                 st.subheader("Filter Courses")
                 FilterProcess()
-
-            st.divider()                
-            st.header("🤖 Ask AI about Courses")
-            AIQueryProcess()
 
     st.divider()
     if st.button("Logout"):
